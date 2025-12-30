@@ -1,8 +1,8 @@
-# Importaciones de FastAPI y typing
+# FastAPI and typing imports
 from fastapi import FastAPI, Query, Path
 from typing import Annotated
 
-# Importados datos y modelos definidos por mi
+# Local data and models defined within the project
 from data.tracks import tracks
 from models.filterparams import FilterParams
 from models.track import Track
@@ -13,7 +13,7 @@ app = FastAPI(title="Awesome Mix Cassette: Guardians of the Galaxy 🚀📼")
 
 @app.get("/")
 async def root():
-    """Expone información básica del servicio y enlaces a recursos útiles."""
+    """Expose basic service metadata and helpful resource links."""
     return {
         "service": "Awesome Mix API",
         "version": "1.0.0",
@@ -25,7 +25,7 @@ async def root():
 
 @app.get("/api/tracks")
 async def get_tracks():
-    """Devuelve el catálogo completo de temas disponibles."""
+    """Return the entire catalog of available tracks."""
     return tracks
 
 
@@ -33,7 +33,7 @@ async def get_tracks():
 async def get_track(
     track_id: Annotated[int, Path(title="The ID of the track to get", ge=1)],
 ):
-    """Busca un tema por su identificador y responde con error si no existe."""
+    """Look up a track by its identifier and respond with an error when missing."""
     for track in tracks:
         if track.id == track_id:
             return track
@@ -42,7 +42,7 @@ async def get_track(
 
 @app.post("/api/tracks")
 async def create_track(track: Track):
-    """Inserta un nuevo tema en memoria y devuelve el objeto confirmado."""
+    """Insert a new track into memory and return the confirmed object."""
     tracks.append(track)
     return track
 
@@ -52,7 +52,7 @@ async def update_track(
     track_id: Annotated[int, Path(title="The ID of the track to update", ge=1)],
     updated_track: Track,
 ):
-    """Sustituye el tema existente con los datos recibidos, si se encuentra."""
+    """Replace the existing track with the provided data when a match is found."""
     for index, track in enumerate(tracks):
         if track.id == track_id:
             tracks[index] = updated_track
@@ -62,7 +62,7 @@ async def update_track(
 
 @app.delete("/api/tracks/{track_id}")
 async def delete_track(track_id: int):
-    """Elimina un tema del catálogo cuando el id coincide."""
+    """Remove a track from the catalog when the id matches."""
     for track in tracks:
         if track.id == track_id:
             tracks.remove(track)
@@ -83,12 +83,12 @@ async def search_tracks(
         ),
     ] = None,
 ):
-    """Filtra resultados por texto libre, aparición en películas y ordenamiento dinámico."""
+    """Filter tracks by free-text search, movie appearances, and dynamic ordering."""
     items = tracks
 
     if q:
         needle = q.lower()
-        # Reduce la lista a coincidencias parciales en título, artista o álbum.
+        # Narrow the list to partial matches in title, artist, or album name.
         items = [
             track
             for track in items
@@ -99,7 +99,7 @@ async def search_tracks(
 
     if filter_query.featured_in:
         requested = {value.lower() for value in filter_query.featured_in}
-        # Conserva solo los temas que aparecieron en alguna de las películas solicitadas.
+        # Keep only the tracks that appear in any of the requested movies.
         items = [
             track
             for track in items
@@ -112,14 +112,14 @@ async def search_tracks(
         "year": lambda track: track.info.year,
     }.get(filter_query.order_by, lambda track: track.title.lower())
 
-    # Ordena la colección en memoria según la clave calculada.
+    # Sort the in-memory collection according to the computed key.
     items = sorted(items, key=order_key)
 
     total = len(items)
     start = filter_query.offset
     end = start + filter_query.limit
 
-    # Devuelve un payload paginado junto con los parámetros de búsqueda para facilitar debugging.
+    # Return a paginated payload along with query parameters to ease debugging.
     return {
         "total": total,
         "items": items[start:end],
