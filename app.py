@@ -13,6 +13,7 @@ app = FastAPI(title="Awesome Mix Cassette: Guardians of the Galaxy 🚀📼")
 
 @app.get("/")
 async def root():
+    """Expone información básica del servicio y enlaces a recursos útiles."""
     return {
         "service": "Awesome Mix API",
         "version": "1.0.0",
@@ -24,6 +25,7 @@ async def root():
 
 @app.get("/api/tracks")
 async def get_tracks():
+    """Devuelve el catálogo completo de temas disponibles."""
     return tracks
 
 
@@ -31,6 +33,7 @@ async def get_tracks():
 async def get_track(
     track_id: Annotated[int, Path(title="The ID of the track to get", ge=1)],
 ):
+    """Busca un tema por su identificador y responde con error si no existe."""
     for track in tracks:
         if track.id == track_id:
             return track
@@ -39,6 +42,7 @@ async def get_track(
 
 @app.post("/api/tracks")
 async def create_track(track: Track):
+    """Inserta un nuevo tema en memoria y devuelve el objeto confirmado."""
     tracks.append(track)
     return track
 
@@ -48,6 +52,7 @@ async def update_track(
     track_id: Annotated[int, Path(title="The ID of the track to update", ge=1)],
     updated_track: Track,
 ):
+    """Sustituye el tema existente con los datos recibidos, si se encuentra."""
     for index, track in enumerate(tracks):
         if track.id == track_id:
             tracks[index] = updated_track
@@ -57,6 +62,7 @@ async def update_track(
 
 @app.delete("/api/tracks/{track_id}")
 async def delete_track(track_id: int):
+    """Elimina un tema del catálogo cuando el id coincide."""
     for track in tracks:
         if track.id == track_id:
             tracks.remove(track)
@@ -77,10 +83,12 @@ async def search_tracks(
         ),
     ] = None,
 ):
+    """Filtra resultados por texto libre, aparición en películas y ordenamiento dinámico."""
     items = tracks
 
     if q:
         needle = q.lower()
+        # Reduce la lista a coincidencias parciales en título, artista o álbum.
         items = [
             track
             for track in items
@@ -91,6 +99,7 @@ async def search_tracks(
 
     if filter_query.featured_in:
         requested = {value.lower() for value in filter_query.featured_in}
+        # Conserva solo los temas que aparecieron en alguna de las películas solicitadas.
         items = [
             track
             for track in items
@@ -103,12 +112,14 @@ async def search_tracks(
         "year": lambda track: track.info.year,
     }.get(filter_query.order_by, lambda track: track.title.lower())
 
+    # Ordena la colección en memoria según la clave calculada.
     items = sorted(items, key=order_key)
 
     total = len(items)
     start = filter_query.offset
     end = start + filter_query.limit
 
+    # Devuelve un payload paginado junto con los parámetros de búsqueda para facilitar debugging.
     return {
         "total": total,
         "items": items[start:end],
